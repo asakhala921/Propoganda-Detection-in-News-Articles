@@ -1,6 +1,11 @@
 ## Task Details
 The details of the SemEval 2020 Task 11 can be found at https://propaganda.qcri.org/semeval2020-task11/index.html
 
+## Usage
+- Install dependencies using the `requirements.txt` file
+- Install package using `pip install -e .` from the root of the project
+- Import the package like `import ucla263brah`
+
 ## References
 These are some of the solutions we have referenced in this project.
 
