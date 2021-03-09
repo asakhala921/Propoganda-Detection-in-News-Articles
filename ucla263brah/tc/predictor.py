@@ -70,10 +70,12 @@ def postprocess(x, probs, labels):
         if (
             counts[spans[i]] >= 3
         ):  # or (counts[spans[i]] >= 2 and log[inverse_mapping["Repetition"]] >= 0.001):
-            log[inverse_mapping["Repetition"]] = 1
+            log[inverse_mapping["Repetition"]] += 0.5
 
-        # if counts[spans[i]] == 1 and (log[inverse_mapping["Repetition"]] < 0.99 or len(spans[i].split()) <= 1):
-        #     log[inverse_mapping["Repetition"]] = 0
+        if counts[spans[i]] == 1 and (
+            log[inverse_mapping["Repetition"]] < 0.99 or len(spans[i].split()) <= 1
+        ):
+            log[inverse_mapping["Repetition"]] -= 0.3
 
         article_preds[i] = log
 
