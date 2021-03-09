@@ -99,7 +99,7 @@ def postprocess_predictions(dev_data, preds, labels):
     )
 
     for i, g in enumerate(df.groupby("article_ids", as_index=False)):
-        _, p = postprocess(g[1], p)
+        _, p = postprocess(g[1], p, labels)
 
     pf = np.argmax(p, axis=-1)
     print(
