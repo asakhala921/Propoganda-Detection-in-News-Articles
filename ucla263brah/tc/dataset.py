@@ -151,7 +151,11 @@ def prepare_data(dataset, max_length=256, prepare_fn=get_spans_with_context):
     for data in dataset["validation"]:
         dev_data.extend(prepare_fn(data, max_length=max_length))
 
-    return train_data, dev_data
+    test_data = []
+    for data in dataset["test"]:
+        test_data.extend(prepare_fn(data, max_length=max_length))
+
+    return train_data, dev_data, test_data
 
 
 def label_counts(data, labels):
