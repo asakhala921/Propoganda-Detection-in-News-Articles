@@ -1,17 +1,13 @@
 from typing import Sequence, List, Optional, Dict
-from functools import partial
 import re
 import gc
 
-import torch
 from spacy_streamlit.util import get_html
 import streamlit as st
 from spacy import displacy
 import pandas as pd
 
-from transformers import AutoModelForSequenceClassification
-
-import ucla263brah.tc as tc
+from ucla263brah.tc.predictor import predict_tc
 from ucla263brah.si.predictor import predict_spans, get_span_indices
 
 DEFAULT_EXAMPLE = [
@@ -76,12 +72,6 @@ COLORS = {
     "Whataboutism,Straw_Men,Red_Herring": "#e4e7d2",
     "Propoganda": "#7aecec",
 }
-
-TC_TOKENIZER = tc.dataset.get_tokenizer("microsoft/deberta-large")
-TC_MODEL = AutoModelForSequenceClassification.from_pretrained(
-    "hd10/semeval2020_task11_tc"
-)
-TC_MODEL.eval()
 
 
 def get_spacy_example(sentences, indices):
@@ -157,6 +147,7 @@ text = st.text_area(
     height=200,
 )
 
+text = re.sub(r"\n+", "\n", text).strip()
 sentences = text.split("\n")
 preds = predict_spans(sentences)
 indices = get_span_indices(sentences, preds)
@@ -169,17 +160,16 @@ visualize_ner(
     show_table=True,
 )
 
-# collate_fn = partial(tc.trainer.collate_fn_with_tokenizer, tokenizer=TC_TOKENIZER)
-# data = TC_TOKENIZER(DEFAULT_DATA["context"], truncation=True)
-# TC_MODEL.to("cuda:0")
-# with torch.no_grad():
-#     output = TC_MODEL(**collate_fn([data]).to("cuda:0"))
+# visualize_ner(DEFAULT_EXAMPLE)
 
-# probs = torch.nn.functional.softmax(output.logits.cpu(), dim=-1).numpy()
+# probs = predict_tc(DEFAULT_DATA["context"])
 # st.text(DEFAULT_DATA["context"])
 # outputs = []
 # for i, p in enumerate(probs[0]):
 #     outputs.append([LABELS[i], f"{p*100:.2f}"])
+
+# del probs
+# gc.collect()
 
 # df = pd.DataFrame(outputs, columns=["Label", "Probability"])
 # st.dataframe(df)

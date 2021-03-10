@@ -1,5 +1,6 @@
 import string
 from collections import defaultdict
+from functools import partial
 
 import torch
 import torch.nn.functional as F
@@ -15,6 +16,11 @@ nltk.download("punkt")
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
+
+from transformers import AutoModelForSequenceClassification
+
+from ucla263brah.tc.dataset import get_tokenizer
+from ucla263brah.tc.trainer import collate_fn_with_tokenizer
 
 
 def compute_metrics(preds, labels):
@@ -111,3 +117,19 @@ def postprocess_predictions(dev_data, preds, labels):
     )
     df["predictions"] = pf
     return df
+
+
+def predict_tc(context):
+    TC_TOKENIZER = get_tokenizer("microsoft/deberta-large")
+    TC_MODEL = AutoModelForSequenceClassification.from_pretrained(
+        "hd10/semeval2020_task11_tc"
+    )
+    TC_MODEL.eval()
+    collate_fn = partial(collate_fn_with_tokenizer, tokenizer=TC_TOKENIZER)
+    data = TC_TOKENIZER(context, truncation=True)
+    TC_MODEL.to("cuda:0")
+    with torch.no_grad():
+        output = TC_MODEL(**collate_fn([data]).to("cuda:0"))
+
+    probs = torch.nn.functional.softmax(output.logits.cpu(), dim=-1).numpy()
+    return probs
