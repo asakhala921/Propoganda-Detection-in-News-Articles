@@ -108,9 +108,9 @@ class BertLstmCrf(BertPreTrainedModel):
             crf output (word_seq_len, batch_size, tag_size, tag_size), hidden
         '''
 
-        kwargs_copy = copy.deepcopy(kwargs)
-        if "labels" in kwargs_copy:
-            kwargs_copy.pop("labels")
+        # kwargs_copy = copy.deepcopy(kwargs)
+        # if "labels" in kwargs_copy:
+        #     kwargs_copy.pop("labels")
 
         batch_size = kwargs["input_ids"].size(0)
         seq_length = kwargs["input_ids"].size(1)

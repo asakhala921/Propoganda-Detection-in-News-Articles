@@ -10,6 +10,7 @@ from ucla263brah.si.span_identification.ner.utils_ner import (
     InputExample,
 )
 import os
+import gc
 import torch
 from torch.nn import CrossEntropyLoss
 
@@ -46,8 +47,10 @@ def predict_spans(sentences):
         checkpoint = os.path.join(checkp, WEIGHTS_NAME)
         state_dict = torch.load(checkpoint)
         model.load_state_dict(state_dict, strict=False)
+        model.to("cuda:0")
 
     del bert_model
+    gc.collect()
 
     examples = [
         InputExample(
@@ -78,11 +81,18 @@ def predict_spans(sentences):
         pad_token_label_id=pad_token_label_id,
     )
 
-    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
-    all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
-    all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long)
+    all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long).to(
+        "cuda:0"
+    )
+    all_input_mask = torch.tensor(
+        [f.input_mask for f in features], dtype=torch.long
+    ).to("cuda:0")
+    all_label_ids = torch.tensor([f.label_ids for f in features], dtype=torch.long).to(
+        "cuda:0"
+    )
 
     del features
+    gc.collect()
 
     model.eval()
     with torch.no_grad():
@@ -93,6 +103,9 @@ def predict_spans(sentences):
         }
         outputs = model(**inputs)
         _, _, predicted_tags = outputs
+
+    del model
+    gc.collect()
 
     preds = []
     # Iterate through each line of text
@@ -110,6 +123,9 @@ def predict_spans(sentences):
             p.append((tokens[i], predicted_tags[x][i]))
 
         preds.append(p)
+
+    del all_input_ids, all_input_mask, all_label_ids
+    gc.collect()
 
     return preds
 
