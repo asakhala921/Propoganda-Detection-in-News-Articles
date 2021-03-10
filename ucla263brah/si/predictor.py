@@ -29,15 +29,26 @@ bert_model = RobertaForTokenClassification.from_pretrained("roberta-large",
 
 
 # Give some dummy data
-example_sentence = "The American heroes found themselves in a disastrous situation."
-example_sentence = example_sentence.split()
-example_converted = InputExample(words=example_sentence, guid=[], labels=["O" for x in example_sentence])
+# example_sentence = "The American heroes found themselves in a disastrous situation."
+
+# Open up the file
+text_examples = []
+with open("article813494037.txt", "r") as f:
+    for line in f.readlines():
+        line = line.replace("\n", "")
+        if line:
+            # print("1 : " + line)
+            example_sentence = line.split()
+            example_converted = InputExample(words=example_sentence, guid=[], labels=["O" for x in example_sentence])
+            text_examples.append(example_converted)
+# example_sentence = example_sentence.split()
+# example_converted = InputExample(words=example_sentence, guid=[], labels=["O" for x in example_sentence])
 
 model_type = "roberta"
 max_seq_length = 256
 pad_token_label_id = CrossEntropyLoss().ignore_index
 label_list = ["O", "B-PROP", "I-PROP"]
-features = convert_examples_to_features([example_converted], label_list, max_seq_length, tokenizer,
+features = convert_examples_to_features(text_examples, label_list, max_seq_length, tokenizer,
                                         cls_token_at_end=bool(model_type in ["xlnet"]),
                                         # xlnet has a cls token at the end
                                         cls_token=tokenizer.cls_token,
@@ -109,11 +120,15 @@ with torch.no_grad():
     # asdf
 
     # print(predicted_tags[0][1])
-    tokens = tokenizer.convert_ids_to_tokens(all_input_ids[0])
 
-    # JUST A REMINDER:
-    #  label "1" means start of propaganda, and "2" means the propaganda ends here.
-    for i in range(len(tokens)):
-        print(tokens[i] + " : " + str(predicted_tags[0][i]))
-        if tokens[i] == "<pad>":
-            break
+    # Iterate through each line of text
+    for x in range(all_input_ids.shape[0]):
+
+        tokens = tokenizer.convert_ids_to_tokens(all_input_ids[x])
+
+        # JUST A REMINDER:
+        #  label "1" means start of propaganda, and "2" means the propaganda ends here.
+        for i in range(len(tokens)):
+            print(tokens[i] + " : " + str(predicted_tags[x][i]))
+            if tokens[i] == "<pad>":
+                break
