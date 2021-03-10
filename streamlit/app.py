@@ -85,7 +85,7 @@ def visualize_ner(
     labels: Sequence[str] = LABELS,
     attrs: List[str] = NER_ATTRS,
     show_table: bool = True,
-    title: Optional[str] = "Named Entities",
+    title: Optional[str] = None,
     colors: Dict[str, str] = COLORS,
     key: Optional[str] = None,
 ) -> None:
