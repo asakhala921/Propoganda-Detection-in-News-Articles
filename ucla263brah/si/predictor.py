@@ -1,5 +1,6 @@
 
 from transformers import RobertaConfig, RobertaForTokenClassification, RobertaTokenizer
+from transformers import DistilBertConfig, DistilBertForTokenClassification, DistilBertTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
 from transformers import WEIGHTS_NAME, AutoModel
 from span_identification.ner.bert_lstm_crf import BertLstmCrf
@@ -11,20 +12,20 @@ import spacy
 from torch.utils.data import TensorDataset
 import numpy as np
 
-nlp = spacy.load("en_core_web_sm")
+# nlp = spacy.load("en_core_web_sm")
 
 # MIGHT HAVE TO CHANGE THIS
-output_dir = "model_checkpoints/si_roberta_crf"
+output_dir = "model_checkpoints/si_distilbert_single"
 
-tokenizer = RobertaTokenizer.from_pretrained("roberta-large", do_lower_case=True)
+tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased", do_lower_case=True)
 checkpoints = [output_dir]
 
 # Load configuration
-config = RobertaConfig.from_pretrained("roberta-large", num_labels=3)
+config = DistilBertConfig.from_pretrained("distilbert-base-uncased", num_labels=3)
 print(config)
 # asdf
 # Load model
-bert_model = RobertaForTokenClassification.from_pretrained("roberta-large",
+bert_model = DistilBertForTokenClassification.from_pretrained("distilbert-base-uncased",
                                     config=config)
 
 
@@ -44,7 +45,7 @@ with open("article813494037.txt", "r") as f:
 # example_sentence = example_sentence.split()
 # example_converted = InputExample(words=example_sentence, guid=[], labels=["O" for x in example_sentence])
 
-model_type = "roberta"
+model_type = "distilbert"
 max_seq_length = 256
 pad_token_label_id = CrossEntropyLoss().ignore_index
 label_list = ["O", "B-PROP", "I-PROP"]
@@ -87,8 +88,8 @@ for checkp in checkpoints:
     embedding_dim=config.hidden_size,
     hidden_dim=int(config.hidden_size / 2),
     rnn_layers=0,
-    rnn_dropout=config.hidden_dropout_prob,
-    output_dropout=config.hidden_dropout_prob,
+    #rnn_dropout=config.hidden_dropout_prob,
+    #output_dropout=config.hidden_dropout_prob,
     use_cuda=True
   )
   checkpoint = os.path.join(checkp, WEIGHTS_NAME)
@@ -130,5 +131,5 @@ with torch.no_grad():
         #  label "1" means start of propaganda, and "2" means the propaganda ends here.
         for i in range(len(tokens)):
             print(tokens[i] + " : " + str(predicted_tags[x][i]))
-            if tokens[i] == "<pad>":
+            if tokens[i] == "[SEP]":
                 break
