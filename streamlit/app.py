@@ -6,7 +6,9 @@ from spacy_streamlit.util import get_html
 import streamlit as st
 from spacy import displacy
 import pandas as pd
+import numpy as np
 
+from ucla263brah.tc.dataset import get_spans_in_context
 from ucla263brah.tc.predictor import predict_tc
 from ucla263brah.si.predictor import predict_spans, get_span_indices
 
@@ -154,15 +156,39 @@ indices = get_span_indices(sentences, preds)
 ex = get_spacy_example(sentences, indices)
 gc.collect()
 
+p = ex[0]
+p["technique_classification"] = {}
+starts = []
+ends = []
+for ent in p["ents"]:
+    starts.append(ent["start"])
+    ends.append(ent["end"])
+
+p["technique_classification"]["start_char_offset"] = starts
+p["technique_classification"]["end_char_offset"] = ends
+p["article_id"] = "dummy"
+
+data = get_spans_in_context(p, max_length=128)
+data = [d["context"] for d in data]
+
 visualize_ner(
     ex,
     labels=["Propoganda"],
-    show_table=True,
+    show_table=False,
 )
 
 # visualize_ner(DEFAULT_EXAMPLE)
 
-# probs = predict_tc(DEFAULT_DATA["context"])
+probs = predict_tc(data)
+preds = np.argmax(probs, axis=-1)
+
+del data, p["technique_classification"], probs
+
+ex = [p]
+for i, ent in enumerate(ex[0]["ents"]):
+    ent["label"] = LABELS[preds[i]]
+
+visualize_ner(ex, show_table=False)
 # st.text(DEFAULT_DATA["context"])
 # outputs = []
 # for i, p in enumerate(probs[0]):
