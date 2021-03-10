@@ -1,6 +1,7 @@
 from typing import Sequence, List, Optional, Dict
 from functools import partial
 import re
+import gc
 
 import torch
 from spacy_streamlit.util import get_html
@@ -93,6 +94,9 @@ def get_spacy_example(sentences, indices):
     current_index = 0
     for i, index in enumerate(indices):
         for start, end in index:
+            if end - start < 2:
+                continue
+
             template["ents"].append(
                 {
                     "start": start + current_index,
@@ -157,6 +161,7 @@ sentences = text.split("\n")
 preds = predict_spans(sentences)
 indices = get_span_indices(sentences, preds)
 ex = get_spacy_example(sentences, indices)
+gc.collect()
 
 visualize_ner(
     ex,
