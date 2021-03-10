@@ -1,13 +1,15 @@
 from typing import Sequence, List, Optional, Dict
+from functools import partial
 
-import spacy_streamlit
+import torch
 from spacy_streamlit.util import get_html
 import streamlit as st
-import spacy
 from spacy import displacy
 import pandas as pd
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForSequenceClassification
+
+import ucla263brah.tc as tc
 
 DEFAULT_EXAMPLE = [
     {
@@ -25,6 +27,16 @@ DEFAULT_EXAMPLE = [
         "title": None,
     }
 ]
+
+DEFAULT_DATA = {
+    "article_id": "article813452859",
+    "context": "January?\nMichael Swadling: I guess her only chance is if Labour decides that they want to dishonour democracy and effectively keep us in the EU.\n© AP Photo / Pablo Martinez Monsivais UK 'In Need of Leadership', May's Brexit Deal Unwelcome to Trump - US Ambassador\nThere is a chance; as unfortunately there are many MPs who don't respect the vote and may just turn on it, but short of that I don't see any way the Conservatives would vote for it, and the majority is slender as it is, as the DUP is bitterly against it, and I can't see the Lib Dems voting for it, so it will only be if there are enough, what I can describe as remoaner MPs, that the deal won't be [BOP] dead in the water [EOP] \nSputnik: What could be a solution to the political chaos if the Prime Minister's deal is not approved?\nMichael Swadling: The EU withdrawal act is in place; we'll leave and revert to WTO terms and that works, that's fine.\nI often use the example of an iPhone to people; that's a piece of technology which is manufactured in China, uses American technology and these are two countries we deal with on WTO terms, this isn't a fantasy, stuck in a port somewhere, there isn't a massive tariff, this is the world that really exists today.\nWhen we exit the EU on WTO terms; that will be fine for whatever trading we do with the EU, just as well as it does for our trade in China.\nREAD MORE: UK",
+    "span": "dead in the water",
+    "span_start": 1293,
+    "span_end": 1310,
+    "text": "EU Profits From Trading With UK While London Loses Money – Political Campaigner\n\nWith the Parliamentary vote on British Prime Minister Theresa May’s Brexit plan set to be held next month; President of the European Commission Jean Claude Juncker has criticised the UK’s preparations for their departure from the EU.\nBut is there any chance that May's deal will make it through parliament and if it fails, how could this ongoing political deadlock finally come to an end?\nSputnik spoke with political campaigner Michael Swadling for more…\nSputnik: Does Theresa May have any chance of getting her deal through Parliament on the 14th January?\nMichael Swadling: I guess her only chance is if Labour decides that they want to dishonour democracy and effectively keep us in the EU.\n© AP Photo / Pablo Martinez Monsivais UK 'In Need of Leadership', May's Brexit Deal Unwelcome to Trump - US Ambassador\nThere is a chance; as unfortunately there are many MPs who don't respect the vote and may just turn on it, but short of that I don't see any way the Conservatives would vote for it, and the majority is slender as it is, as the DUP is bitterly against it, and I can't see the Lib Dems voting for it, so it will only be if there are enough, what I can describe as remoaner MPs, that the deal won't be dead in the water.\nSputnik: What could be a solution to the political chaos if the Prime Minister's deal is not approved?\nMichael Swadling: The EU withdrawal act is in place; we'll leave and revert to WTO terms and that works, that's fine.\nI often use the example of an iPhone to people; that's a piece of technology which is manufactured in China, uses American technology and these are two countries we deal with on WTO terms, this isn't a fantasy, stuck in a port somewhere, there isn't a massive tariff, this is the world that really exists today.\nWhen we exit the EU on WTO terms; that will be fine for whatever trading we do with the EU, just as well as it does for our trade in China.\nREAD MORE: UK Finance Chief Bashed for Failing to Unlock Money for No-Deal Brexit — Reports\nSputnik: Do you think that the EU needs the UK more than the UK needs the EU?\nMichael Swadling: The EU makes a profit on its trade with the UK; the UK makes a loss on its trade with the EU.\nThey have a financial incentive to ensure that good trading relations continue far more than we do.\n© REUTERS / Toby Melville UK Trade Minister Says '50-50' Chance Brexit Will Not Happen – Reports\nThe lifeblood and cash flow that keeps manufacturing in Europe going, comes from the city of London.\nIf someone in a city in Germany wants to do a deal with someone in Japan; the financial services of that are probably going through the city of London, they're not going through Frankfurt and Paris.\nViews and opinions, expressed in the article are those of Michael Swadling and do not necessarily reflect those of Sputnik\n\n",
+    "technique": -1,
+}
 
 
 NER_ATTRS = ["label", "start", "end"]
@@ -60,6 +72,12 @@ COLORS = {
     "Thought-terminating_Cliches": "#bfe1d9",
     "Whataboutism,Straw_Men,Red_Herring": "#e4e7d2",
 }
+
+TC_TOKENIZER = tc.dataset.get_tokenizer("microsoft/deberta-large")
+TC_MODEL = AutoModelForSequenceClassification.from_pretrained(
+    "hd10/semeval2020_task11_tc"
+)
+TC_MODEL.eval()
 
 
 def visualize_ner(
@@ -100,12 +118,25 @@ def visualize_ner(
         st.dataframe(df)
 
 
-st.title("UCLA263")
+st.title("Propoganda Detection")
 # text = st.text_area("Text to analyze", DEFAULT_EXAMPLE[0]["text"], height=200)
 
 visualize_ner(
     DEFAULT_EXAMPLE,
     show_table=True,
-    title="Propoganda Detection",
 )
-# st.text(f"Analyzed using spaCy model {spacy_model}")
+
+collate_fn = partial(tc.trainer.collate_fn_with_tokenizer, tokenizer=TC_TOKENIZER)
+data = TC_TOKENIZER(DEFAULT_DATA["context"], truncation=True)
+TC_MODEL.to("cuda:0")
+with torch.no_grad():
+    output = TC_MODEL(**collate_fn([data]).to("cuda:0"))
+
+probs = torch.nn.functional.softmax(output.logits.cpu(), dim=-1).numpy()
+st.text(DEFAULT_DATA["context"])
+outputs = []
+for i, p in enumerate(probs[0]):
+    outputs.append([LABELS[i], f"{p*100:.2f}"])
+
+df = pd.DataFrame(outputs, columns=["Label", "Probability"])
+st.dataframe(df)
