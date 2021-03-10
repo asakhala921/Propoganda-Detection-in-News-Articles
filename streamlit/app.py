@@ -1,6 +1,7 @@
 from typing import Sequence, List, Optional, Dict
 import re
 import gc
+import copy
 
 from spacy_streamlit.util import get_html
 import streamlit as st
@@ -145,43 +146,68 @@ text = st.text_area(
     height=200,
 )
 
-text = re.sub(r"\n+", "\n", text).strip()
-sentences = text.split("\n")
-preds = predict_spans(sentences)
-indices = get_span_indices(sentences, preds)
-ex = get_spacy_example(sentences, indices)
-gc.collect()
 
-p = ex[0]
-p["technique_classification"] = {}
-starts = []
-ends = []
-for ent in p["ents"]:
-    starts.append(ent["start"])
-    ends.append(ent["end"])
+@st.cache(max_entries=10)
+def propoganda_spans(text):
+    if len(text) < 1:
+        return None
 
-p["technique_classification"]["start_char_offset"] = starts
-p["technique_classification"]["end_char_offset"] = ends
-p["article_id"] = "dummy"
+    text = re.sub(r"\n+", "\n", text).strip()
+    sentences = text.split("\n")
+    preds = predict_spans(sentences)
+    indices = get_span_indices(sentences, preds)
+    ex = get_spacy_example(sentences, indices)
+    gc.collect()
+    return ex
 
-data = get_spans_in_context(p, max_length=128)
-data = [d["context"] for d in data]
 
-visualize_ner(
-    ex,
-    labels=["Propoganda"],
-    show_table=False,
-)
+ex = propoganda_spans(text)
+if ex is not None:
+    visualize_ner(
+        ex,
+        labels=["Propoganda"],
+        show_table=False,
+    )
 
-if len(data) > 0:
-    st.title("Technique Classification")
-    probs = predict_tc(data)
-    preds = np.argmax(probs, axis=-1)
+    st.sidebar.header("Propoganda Spans Quality")
+    st.sidebar.slider("", key="si")
 
-    del data, p["technique_classification"], probs
 
-    ex = [p]
-    for i, ent in enumerate(ex[0]["ents"]):
-        ent["label"] = LABELS[preds[i]]
+@st.cache(max_entries=10)
+def propoganda_techniques(ex):
+    p = ex[0]
+    p["technique_classification"] = {}
+    starts = []
+    ends = []
+    for ent in p["ents"]:
+        starts.append(ent["start"])
+        ends.append(ent["end"])
 
-    visualize_ner(ex, show_table=False)
+    p["technique_classification"]["start_char_offset"] = starts
+    p["technique_classification"]["end_char_offset"] = ends
+    p["article_id"] = "dummy"
+
+    data = get_spans_in_context(p, max_length=128)
+    data = [d["context"] for d in data]
+
+    if len(data) > 0:
+        probs = predict_tc(data)
+        preds = np.argmax(probs, axis=-1)
+
+        del data, p["technique_classification"]
+
+        for i, ent in enumerate(p["ents"]):
+            ent["label"] = LABELS[preds[i]]
+
+    return ex
+
+
+if ex is not None:
+    example_tc = propoganda_techniques(copy.deepcopy(ex))
+    gc.collect()
+
+    if len(example_tc[0]["ents"]) > 0:
+        st.title("Technique Classification")
+        visualize_ner(example_tc, show_table=False)
+        st.sidebar.header("Propoganda Techniques Quality")
+        st.sidebar.slider("", key="tc")
