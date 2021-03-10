@@ -138,7 +138,7 @@ def visualize_ner(
 
 
 st.title("Propoganda Detection")
-input_text = re.sub(r"\n+", "\n", DEFAULT_EXAMPLE[0]["text"]).strip()
+input_text = re.sub(r"\n+", "\n", DEFAULT_EXAMPLE).strip()
 text = st.text_area(
     "Text to analyze",
     input_text,
