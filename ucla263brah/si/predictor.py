@@ -44,7 +44,6 @@ def predict_spans(sentences):
             use_cuda=True,
         )
         checkpoint = os.path.join(checkp, WEIGHTS_NAME)
-        print(checkpoint)
         state_dict = torch.load(checkpoint)
         model.load_state_dict(state_dict, strict=False)
 
@@ -95,22 +94,61 @@ def predict_spans(sentences):
         outputs = model(**inputs)
         _, _, predicted_tags = outputs
 
-        # Iterate through each line of text
-        for x in range(all_input_ids.shape[0]):
-            tokens = tokenizer.convert_ids_to_tokens(all_input_ids[x])
+    preds = []
+    # Iterate through each line of text
+    for x in range(all_input_ids.shape[0]):
+        p = []
+        tokens = tokenizer.convert_ids_to_tokens(all_input_ids[x])
 
-            # JUST A REMINDER:
-            #  label "1" means start of propaganda, and "2" means the propaganda ends here.
-            for i in range(len(tokens)):
-                print(tokens[i] + " : " + str(predicted_tags[x][i]))
-                if tokens[i] == "[SEP]":
-                    break
+        # JUST A REMINDER:
+        #  label "1" means start of propaganda, and "2" means the propaganda ends here.
+        for i in range(len(tokens)):
+            if tokens[i] == "[SEP]":
+                break
+            if tokens[i] == "[CLS]":
+                continue
+            p.append((tokens[i], predicted_tags[x][i]))
+
+        preds.append(p)
+
+    return preds
+
+
+def get_span_indices_for_sentence(s, p):
+    spans = []
+    current_span = ""
+    for span in p:
+        if span[1] == 0:
+            if len(current_span) > 0:
+                spans.append(current_span.strip())
+            current_span = ""
+        else:
+            current_span += span[0] + " "
+
+    indices = []
+    for span in spans:
+        start = s.lower().find(span)
+        end = start + len(span)
+        assert span == s[start:end].lower()
+        indices.append((start, end))
+
+    return indices
+
+
+def get_span_indices(sentences, preds):
+    indices = []
+    for i, p in enumerate(preds):
+        index = get_span_indices_for_sentence(sentences[i], p)
+        indices.append(index)
+
+    return indices
 
 
 if __name__ == "__main__":
-    predict_spans(
-        [
-            "The American heroes found themselves in a disastrous situation.",
-            "The American heroes found themselves in a disastrous situation.",
-        ]
-    )
+    sentences = [
+        "The American heroes found themselves in a disastrous situation.",
+        "The American heroes found themselves in a disastrous situation.",
+    ]
+    preds = predict_spans(sentences)
+    indices = get_span_indices(sentences, preds)
+    print(preds)
