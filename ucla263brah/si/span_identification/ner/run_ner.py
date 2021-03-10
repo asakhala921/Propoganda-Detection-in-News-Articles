@@ -50,9 +50,9 @@ from .modeling_roberta import RobertaForTokenClassification
 
 logger = logging.getLogger(__name__)
 
-ALL_MODELS = sum(
-    (tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, RobertaConfig, DistilBertConfig)),
-    ())
+# ALL_MODELS = sum(
+#     (tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, RobertaConfig, DistilBertConfig)),
+#     ())
 
 MODEL_CLASSES = {
     "bert": (BertConfig, BertForTokenClassification, BertTokenizer),

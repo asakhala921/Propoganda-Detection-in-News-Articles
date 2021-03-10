@@ -19,14 +19,15 @@ from torch.autograd import Variable
 import torch
 
 from .conditional_random_field import ConditionalRandomField, allowed_transitions
-
-
-class BertLstmCrf(nn.Module):
+# from transformers.modeling_bert import BertPreTrainedModel
+from transformers.models.bert.modeling_bert import BertPreTrainedModel #, gelu
+# class BertLstmCrf(nn.Module):
+class BertLstmCrf(BertPreTrainedModel):
     """
     bert_lstm_crf model
     """
 
-    def __init__(self, bert_model,
+    def __init__(self, bert_model, config,
                  num_labels=9,
                  embedding_dim=512,
                  hidden_dim=512,
@@ -34,7 +35,11 @@ class BertLstmCrf(nn.Module):
                  rnn_dropout=0.1,
                  output_dropout=0.1,
                  use_cuda=False):
-        super(BertLstmCrf, self).__init__()
+        # super(BertLstmCrf, self).__init__()
+        super(BertLstmCrf, self).__init__(config)
+
+        self.config = config
+
         self.bert_encoder = bert_model
 
         self.embedding_dim = embedding_dim
@@ -79,7 +84,7 @@ class BertLstmCrf(nn.Module):
         return Variable(
             torch.randn(2 * self.rnn_layers, batch_size, self.hidden_dim)), Variable(
             torch.randn(2 * self.rnn_layers, batch_size, self.hidden_dim))
-    
+
     def clear_subtokens(self, logits, labels, mask):
         clear_labels = torch.zeros_like(labels)
         clear_logits = torch.zeros_like(logits)
@@ -122,15 +127,15 @@ class BertLstmCrf(nn.Module):
             sequence_output, hidden = self.lstm(sequence_output, hidden)
             sequence_output = sequence_output.contiguous().view(-1, self.hidden_dim * 2)
             sequence_output = self.output_dropout(sequence_output)
-            
+
             sequence_output = self.liner(sequence_output)
 
         #out = self.liner(sequence_output)
         out = sequence_output
         logits = out.contiguous().view(batch_size, seq_length, -1)
-        
+
         clear_logits, clear_labels, clear_mask = self.clear_subtokens(logits, kwargs['labels'], kwargs["attention_mask"])
-        
+
         """
         best_paths = self.crf.viterbi_tags(
             logits,
@@ -145,7 +150,7 @@ class BertLstmCrf(nn.Module):
         )
         # Just get the top tags and ignore the scores.
         predicted_tags = cast(List[List[int]], [x[0][0] for x in best_paths])
-        
+
         if kwargs.get("labels") is not None:
             labels = kwargs.get("labels").cpu()
             #log_likelihood = self.crf(logits, kwargs.get("labels"), kwargs["attention_mask"])

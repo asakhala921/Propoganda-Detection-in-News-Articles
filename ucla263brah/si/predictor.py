@@ -1,7 +1,7 @@
 
 from transformers import RobertaConfig, RobertaForTokenClassification, RobertaTokenizer
 from transformers import AdamW, get_linear_schedule_with_warmup
-from transformers import WEIGHTS_NAME
+from transformers import WEIGHTS_NAME, AutoModel
 from span_identification.ner.bert_lstm_crf import BertLstmCrf
 from span_identification.ner.utils_ner import convert_examples_to_features, InputExample
 import os
@@ -22,7 +22,7 @@ checkpoints = [output_dir]
 # Load configuration
 config = RobertaConfig.from_pretrained("roberta-large", num_labels=3)
 print(config)
-
+# asdf
 # Load model
 bert_model = RobertaForTokenClassification.from_pretrained("roberta-large",
                                     config=config)
@@ -71,6 +71,7 @@ print(all_label_ids.shape)
 for checkp in checkpoints:
   model = BertLstmCrf(
     bert_model,
+    config,
     num_labels=3,
     embedding_dim=config.hidden_size,
     hidden_dim=int(config.hidden_size / 2),
@@ -83,7 +84,15 @@ for checkp in checkpoints:
   print(checkpoint)
   state_dict = torch.load(checkpoint)
   model.load_state_dict(state_dict, strict=False)
+#
+# print("Saving to Huggingface")
+# model.save_pretrained("model_checkpoints/semeval2020_task11_si")
+# tokenizer.save_pretrained("model_checkpoints/semeval2020_task11_si")
 
+#
+
+# model = AutoModel.from_pretrained("tuscan-chicken-wrap/semeval2020_task11_si")
+# model.load_state_dict(torch.load("model_checkpoints/ner_deberta_large_crf/pytorch_model.bin"))
 
 model.eval()
 with torch.no_grad():
@@ -93,9 +102,11 @@ with torch.no_grad():
     # if args.model_type != "distilbert":
         # inputs["token_type_ids"] = batch[2] if args.model_type in ["bert", "xlnet"] else None  # XLM and RoBERTa don"t use segment_ids
     outputs = model(**inputs)
-    tmp_eval_loss, logits, predicted_tags = outputs
 
-
+    # print(outputs['last_hidden_state'].shape)
+    # print(outputs["pooler_output"].shape)
+    _, _, predicted_tags = outputs
+    # asdf
 
     # print(predicted_tags[0][1])
     tokens = tokenizer.convert_ids_to_tokens(all_input_ids[0])

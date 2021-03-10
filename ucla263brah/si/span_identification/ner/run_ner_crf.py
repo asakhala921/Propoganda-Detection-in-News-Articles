@@ -48,16 +48,16 @@ from scipy.special import softmax
 
 logger = logging.getLogger(__name__)
 
-ALL_MODELS = sum(
-    (tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, RobertaConfig, DistilBertConfig)),
-    ())
+# ALL_MODELS = sum(
+#     (tuple(conf.pretrained_config_archive_map.keys()) for conf in (BertConfig, RobertaConfig, DistilBertConfig)),
+#     ())
 
 MODEL_CLASSES = {
     "bert": (BertConfig, BertForTokenClassification, BertTokenizer),
     "roberta": (RobertaConfig, RobertaForTokenClassification, RobertaTokenizer),
     "distilbert": (DistilBertConfig, DistilBertForTokenClassification, DistilBertTokenizer),
     "camembert": (CamembertConfig, CamembertForTokenClassification, CamembertTokenizer),
-    "xlnet": (XLNetConfig, XLNetForTokenClassification, XLNetTokenizer)
+    "xlnet": (XLNetConfig, XLNetForTokenClassification, XLNetTokenizer)# ,
     # "deberta": (DebertaConfig, DebertaForTokenClassification, DebertaTokenizer)
 }
 
@@ -230,11 +230,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
         batch = tuple(t.to(args.device) for t in batch)
 
         with torch.no_grad():
-            print(batch[0].shape)
-            print(batch[1].shape)
-            print(batch[3].shape)
-            print(batch[1][0])
-            asdf
+
             inputs = {"input_ids": batch[0],
                       "attention_mask": batch[1],
                       "labels": batch[3]}
@@ -411,6 +407,7 @@ def transformers_ner_crf(args):
         config.hidden_dropout_prob = config.dropout
     model = BertLstmCrf(
         bert_model,
+        config,
         num_labels=num_labels,
         embedding_dim=config.hidden_size,
         hidden_dim=int(config.hidden_size / 2),
@@ -472,6 +469,7 @@ def transformers_ner_crf(args):
 
             model = BertLstmCrf(
                 bert_model,
+                config,
                 num_labels=num_labels,
                 embedding_dim=config.hidden_size,
                 hidden_dim=int(config.hidden_size / 2),
@@ -511,6 +509,7 @@ def transformers_ner_crf(args):
         for checkp in checkpoints:
             model = BertLstmCrf(
                 bert_model,
+                config,
                 num_labels=num_labels,
                 embedding_dim=config.hidden_size,
                 hidden_dim=int(config.hidden_size / 2),

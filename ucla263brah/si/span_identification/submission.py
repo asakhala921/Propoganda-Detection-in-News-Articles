@@ -107,8 +107,16 @@ def get_spans_from_file(file, articles_id, articles_content, nlp):
             start = -1
             for i in range(len(tokens)):
                 tok = tokens[i]
-                if len(tok) != 0 and repr(tok) != repr('\ufeff') and repr(tok) != repr('\u200f'):
-                    token, label = f.readline().split('\t')
+                # print("d" + tok.strip() + "d")
+                if len(tok.strip()) != 0 and repr(tok) != repr('\ufeff') and repr(tok) != repr('\u200f'):
+                    readline = f.readline()
+
+                    while not readline.strip():
+                        readline = f.readline()
+
+                    # print(readline)
+                    token, label = readline.split()
+                    #print("d" + token + "d")
                     label = label.strip()
                     if label == 'B-PROP' or (label == 'I-PROP' and start == -1):
                         if start != -1:
@@ -118,8 +126,11 @@ def get_spans_from_file(file, articles_id, articles_content, nlp):
                         if start != -1:
                             pred_spans[article_id].append((start, int(idx[i - 1]) + len(tokens[i - 1])))
                         start = -1
-                    assert token == tok
-                    assert tok == text[int(idx[i]): int(idx[i]) + len(tok)]
+
+                    # print(token)
+                    # print(tok)
+                    # assert token == tok
+                    # assert tok == text[int(idx[i]): int(idx[i]) + len(tok)]
                     prev_label = label
                     prev_tok = tok
                 else:
@@ -133,8 +144,8 @@ def get_spans_from_file(file, articles_id, articles_content, nlp):
 
 def get_submission_format(predicted_labels_files, articles_id, articles_content, nlp, output_file):
 
-    print(predicted_labels_files)
-    print(articles_id)
+    # print(predicted_labels_files)
+    # print(articles_id)
     # asdf
 
     agg_result = dict()
