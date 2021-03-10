@@ -1,5 +1,6 @@
 from typing import Sequence, List, Optional, Dict
 from functools import partial
+import re
 
 import torch
 from spacy_streamlit.util import get_html
@@ -10,6 +11,7 @@ import pandas as pd
 from transformers import AutoModelForSequenceClassification
 
 import ucla263brah.tc as tc
+from ucla263brah.si.predictor import predict_spans, get_span_indices
 
 DEFAULT_EXAMPLE = [
     {
@@ -71,6 +73,7 @@ COLORS = {
     "Slogans": "#bfe1d9",
     "Thought-terminating_Cliches": "#bfe1d9",
     "Whataboutism,Straw_Men,Red_Herring": "#e4e7d2",
+    "Propoganda": "#7aecec",
 }
 
 TC_TOKENIZER = tc.dataset.get_tokenizer("microsoft/deberta-large")
@@ -78,6 +81,30 @@ TC_MODEL = AutoModelForSequenceClassification.from_pretrained(
     "hd10/semeval2020_task11_tc"
 )
 TC_MODEL.eval()
+
+
+def get_spacy_example(sentences, indices):
+    template = {
+        "ents": [],
+        "text": "",
+        "title": None,
+    }
+
+    current_index = 0
+    for i, index in enumerate(indices):
+        for start, end in index:
+            template["ents"].append(
+                {
+                    "start": start + current_index,
+                    "end": end + current_index,
+                    "label": "Propoganda",
+                }
+            )
+
+        template["text"] += sentences[i] + "\n"
+        current_index = len(template["text"])
+
+    return [template]
 
 
 def visualize_ner(
@@ -119,24 +146,35 @@ def visualize_ner(
 
 
 st.title("Propoganda Detection")
-# text = st.text_area("Text to analyze", DEFAULT_EXAMPLE[0]["text"], height=200)
+input_text = re.sub(r"\n+", "\n", DEFAULT_EXAMPLE[0]["text"]).strip()
+text = st.text_area(
+    "Text to analyze",
+    input_text,
+    height=200,
+)
+
+sentences = text.split("\n")
+preds = predict_spans(sentences)
+indices = get_span_indices(sentences, preds)
+ex = get_spacy_example(sentences, indices)
 
 visualize_ner(
-    DEFAULT_EXAMPLE,
+    ex,
+    labels=["Propoganda"],
     show_table=True,
 )
 
-collate_fn = partial(tc.trainer.collate_fn_with_tokenizer, tokenizer=TC_TOKENIZER)
-data = TC_TOKENIZER(DEFAULT_DATA["context"], truncation=True)
-TC_MODEL.to("cuda:0")
-with torch.no_grad():
-    output = TC_MODEL(**collate_fn([data]).to("cuda:0"))
+# collate_fn = partial(tc.trainer.collate_fn_with_tokenizer, tokenizer=TC_TOKENIZER)
+# data = TC_TOKENIZER(DEFAULT_DATA["context"], truncation=True)
+# TC_MODEL.to("cuda:0")
+# with torch.no_grad():
+#     output = TC_MODEL(**collate_fn([data]).to("cuda:0"))
 
-probs = torch.nn.functional.softmax(output.logits.cpu(), dim=-1).numpy()
-st.text(DEFAULT_DATA["context"])
-outputs = []
-for i, p in enumerate(probs[0]):
-    outputs.append([LABELS[i], f"{p*100:.2f}"])
+# probs = torch.nn.functional.softmax(output.logits.cpu(), dim=-1).numpy()
+# st.text(DEFAULT_DATA["context"])
+# outputs = []
+# for i, p in enumerate(probs[0]):
+#     outputs.append([LABELS[i], f"{p*100:.2f}"])
 
-df = pd.DataFrame(outputs, columns=["Label", "Probability"])
-st.dataframe(df)
+# df = pd.DataFrame(outputs, columns=["Label", "Probability"])
+# st.dataframe(df)
