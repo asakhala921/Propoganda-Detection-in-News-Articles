@@ -82,7 +82,7 @@ for checkp in checkpoints:
   checkpoint = os.path.join(checkp, WEIGHTS_NAME)
   print(checkpoint)
   state_dict = torch.load(checkpoint)
-  model.load_state_dict(state_dict)
+  model.load_state_dict(state_dict, strict=False)
 
 
 model.eval()
